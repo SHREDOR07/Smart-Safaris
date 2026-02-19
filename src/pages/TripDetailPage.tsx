@@ -8,6 +8,7 @@ import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import AddExpenseDialog from "@/components/AddExpenseDialog";
 import EditTripDialog from "@/components/EditTripDialog";
+import TripMap from "@/components/TripMap";
 import { useToast } from "@/hooks/use-toast";
 
 type Trip = Tables<"trips">;
@@ -112,6 +113,14 @@ const TripDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Map */}
+      {trip.location && (
+        <div className="mb-6">
+          <h2 className="font-display font-semibold mb-3">Map & Route</h2>
+          <TripMap location={trip.location} />
+        </div>
+      )}
 
       {/* Expenses */}
       <div className="flex items-center justify-between mb-4">
