@@ -1,10 +1,9 @@
-import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Navigation, Loader2 } from "lucide-react";
 
-// Fix leaflet default icon issue with bundlers
+// Fix leaflet default icon paths broken by bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -12,120 +11,116 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const currentLocationIcon = new L.Icon({
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  className: "hue-rotate-[200deg] saturate-200",
-});
-
-const destinationIcon = new L.DivIcon({
-  html: `<div style="background: hsl(263 70% 60%); width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4);"></div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -36],
-  className: "",
-});
-
-function FitBounds({ positions }: { positions: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (positions.length >= 2) {
-      map.fitBounds(positions, { padding: [60, 60] });
-    } else if (positions.length === 1) {
-      map.setView(positions[0], 10);
-    }
-  }, [positions, map]);
-  return null;
-}
-
 interface TripMapProps {
   location: string;
 }
 
 const TripMap = ({ location }: TripMapProps) => {
-  const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
-  const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
-  const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
-  const [geocodeError, setGeocodeError] = useState(false);
-  const [geoError, setGeoError] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const routeFetched = useRef(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
-  // Geocode destination
+  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [geoError, setGeoError] = useState(false);
+
   useEffect(() => {
-    if (!location) { setLoading(false); return; }
-    const encoded = encodeURIComponent(location);
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`)
+    if (!mapRef.current || !location) {
+      setStatus("error");
+      return;
+    }
+
+    // Avoid double-init on hot reload
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    const map = L.map(mapRef.current, { scrollWheelZoom: false });
+    mapInstanceRef.current = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    const destIcon = L.divIcon({
+      html: `<div style="background:hsl(263,70%,60%);width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -32],
+      className: "",
+    });
+
+    // 1. Geocode destination
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`)
       .then((r) => r.json())
       .then((data) => {
-        if (data && data.length > 0) {
-          setDestCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
-        } else {
-          setGeocodeError(true);
+        if (!data || data.length === 0) { setStatus("error"); return; }
+
+        const destLat = parseFloat(data[0].lat);
+        const destLon = parseFloat(data[0].lon);
+        const destLatLng = L.latLng(destLat, destLon);
+
+        const destMarker = L.marker(destLatLng, { icon: destIcon })
+          .addTo(map)
+          .bindPopup(location);
+
+        setStatus("ready");
+        map.setView(destLatLng, 6);
+
+        // 2. Try GPS
+        if (!navigator.geolocation) {
+          setGeoError(true);
+          return;
         }
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const userLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+            const userMarker = L.marker(userLatLng).addTo(map).bindPopup("Your location");
+
+            // Fit both markers
+            const bounds = L.latLngBounds([userLatLng, destLatLng]);
+            map.fitBounds(bounds, { padding: [60, 60] });
+
+            // 3. Fetch driving route via OSRM
+            fetch(
+              `https://router.project-osrm.org/route/v1/driving/${pos.coords.longitude},${pos.coords.latitude};${destLon},${destLat}?overview=full&geometries=geojson`
+            )
+              .then((r) => r.json())
+              .then((rd) => {
+                if (rd.routes && rd.routes[0]) {
+                  const coords = rd.routes[0].geometry.coordinates as [number, number][];
+                  const latlngs: L.LatLngTuple[] = coords.map(([lon, lat]) => [lat, lon]);
+                  L.polyline(latlngs, { color: "hsl(263,70%,60%)", weight: 4, opacity: 0.85 }).addTo(map);
+                } else {
+                  // Fallback straight line
+                  L.polyline([userLatLng, destLatLng], { color: "hsl(263,70%,60%)", weight: 3, dashArray: "8,8" }).addTo(map);
+                }
+              })
+              .catch(() => {
+                L.polyline([userLatLng, destLatLng], { color: "hsl(263,70%,60%)", weight: 3, dashArray: "8,8" }).addTo(map);
+              });
+          },
+          () => setGeoError(true),
+          { timeout: 8000 }
+        );
       })
-      .catch(() => setGeocodeError(true))
-      .finally(() => setLoading(false));
+      .catch(() => setStatus("error"));
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, [location]);
 
-  // Get user GPS
-  useEffect(() => {
-    if (!navigator.geolocation) { setGeoError(true); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserCoords([pos.coords.latitude, pos.coords.longitude]),
-      () => setGeoError(true),
-      { timeout: 8000 }
-    );
-  }, []);
-
-  // Fetch route via OSRM (free, no key)
-  useEffect(() => {
-    if (!userCoords || !destCoords || routeFetched.current) return;
-    routeFetched.current = true;
-    const [uLat, uLon] = userCoords;
-    const [dLat, dLon] = destCoords;
-    fetch(
-      `https://router.project-osrm.org/route/v1/driving/${uLon},${uLat};${dLon},${dLat}?overview=full&geometries=geojson`
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.routes && data.routes[0]) {
-          const coords = data.routes[0].geometry.coordinates as [number, number][];
-          // OSRM returns [lon, lat], flip to [lat, lon]
-          setRoutePoints(coords.map(([lon, lat]) => [lat, lon]));
-        }
-      })
-      .catch(() => {
-        // fallback: straight line
-        if (userCoords && destCoords) setRoutePoints([userCoords, destCoords]);
-      });
-  }, [userCoords, destCoords]);
-
-  const mapPositions: [number, number][] = [
-    ...(userCoords ? [userCoords] : []),
-    ...(destCoords ? [destCoords] : []),
-  ];
-
-  const defaultCenter: [number, number] = destCoords || [0, 20];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-56 rounded-xl bg-card border border-border">
-        <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-        <span className="text-sm text-muted-foreground">Loading map…</span>
-      </div>
-    );
-  }
-
-  if (geocodeError) {
+  if (status === "error") {
     return (
       <div className="flex flex-col items-center justify-center h-40 rounded-xl bg-card border border-border text-muted-foreground gap-2">
         <MapPin className="w-5 h-5" />
-        <p className="text-sm">Could not locate <span className="font-medium text-foreground">"{location}"</span> on the map.</p>
+        <p className="text-sm">
+          Could not locate <span className="font-medium text-foreground">"{location}"</span> on the map.
+        </p>
       </div>
     );
   }
@@ -134,42 +129,19 @@ const TripMap = ({ location }: TripMapProps) => {
     <div className="rounded-xl overflow-hidden border border-border shadow-sm">
       <div className="px-3 py-2 bg-card border-b border-border flex items-center gap-2 text-xs text-muted-foreground">
         <Navigation className="w-3.5 h-3.5 text-primary" />
-        <span>Route to <span className="font-medium text-foreground">{location}</span></span>
-        {geoError && <span className="ml-auto text-yellow-500">GPS unavailable — destination only</span>}
+        <span>
+          Route to <span className="font-medium text-foreground">{location}</span>
+        </span>
+        {status === "loading" && (
+          <span className="ml-auto flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+          </span>
+        )}
+        {geoError && status === "ready" && (
+          <span className="ml-auto text-yellow-500">GPS unavailable — destination only</span>
+        )}
       </div>
-      <MapContainer
-        center={defaultCenter}
-        zoom={4}
-        style={{ height: "260px", width: "100%" }}
-        zoomControl={true}
-        scrollWheelZoom={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        {destCoords && (
-          <Marker position={destCoords} icon={destinationIcon}>
-            <Popup>{location}</Popup>
-          </Marker>
-        )}
-
-        {userCoords && (
-          <Marker position={userCoords} icon={currentLocationIcon}>
-            <Popup>Your location</Popup>
-          </Marker>
-        )}
-
-        {routePoints.length >= 2 && (
-          <Polyline
-            positions={routePoints}
-            pathOptions={{ color: "hsl(263,70%,60%)", weight: 4, opacity: 0.8 }}
-          />
-        )}
-
-        {mapPositions.length > 0 && <FitBounds positions={mapPositions} />}
-      </MapContainer>
+      <div ref={mapRef} style={{ height: 260, width: "100%" }} />
     </div>
   );
 };
