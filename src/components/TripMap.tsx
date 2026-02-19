@@ -49,14 +49,14 @@ const TripMap = ({ location }: TripMapProps) => {
       className: "",
     });
 
-    // 1. Geocode destination
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`)
+    // 1. Geocode destination via Photon (CORS-friendly, free)
+    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(location)}&limit=1`)
       .then((r) => r.json())
       .then((data) => {
-        if (!data || data.length === 0) { setStatus("error"); return; }
+        if (!data?.features?.length) { setStatus("error"); return; }
 
-        const destLat = parseFloat(data[0].lat);
-        const destLon = parseFloat(data[0].lon);
+        // Photon returns GeoJSON: coordinates are [lon, lat]
+        const [destLon, destLat] = data.features[0].geometry.coordinates as [number, number];
         const destLatLng = L.latLng(destLat, destLon);
 
         const destMarker = L.marker(destLatLng, { icon: destIcon })
