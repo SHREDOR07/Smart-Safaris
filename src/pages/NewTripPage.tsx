@@ -10,6 +10,26 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
+import beachBg from "@/assets/category-beach.jpg";
+import adventureBg from "@/assets/category-adventure.jpg";
+import foodBg from "@/assets/category-food.jpg";
+import luxuryBg from "@/assets/category-luxury.jpg";
+import cultureBg from "@/assets/category-culture.jpg";
+import businessBg from "@/assets/category-business.jpg";
+
+const CATEGORIES = [
+  { value: "beach", label: "Beach", emoji: "🏖️", bg: beachBg },
+  { value: "adventure", label: "Adventure", emoji: "🏔️", bg: adventureBg },
+  { value: "food", label: "Food & Gastronomy", emoji: "🍜", bg: foodBg },
+  { value: "luxury", label: "Luxury & Spa", emoji: "💎", bg: luxuryBg },
+  { value: "culture", label: "Culture & Heritage", emoji: "🏛️", bg: cultureBg },
+  { value: "business", label: "Business & Urban", emoji: "🏙️", bg: businessBg },
+  { value: "nature", label: "Nature & Hiking", emoji: "🌿", bg: adventureBg },
+  { value: "history", label: "History & Arts", emoji: "🎭", bg: cultureBg },
+  { value: "resort", label: "Resort", emoji: "🌴", bg: luxuryBg },
+  { value: "gastronomy", label: "Wine & Dine", emoji: "🍷", bg: foodBg },
+];
+
 type TripStatus = Database["public"]["Enums"]["trip_status"];
 
 const NewTripPage = () => {
@@ -96,9 +116,32 @@ const NewTripPage = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Personal" className="bg-secondary border-border" />
+        </div>
+        <div className="space-y-2">
+          <Label>Category</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => setCategory(cat.value)}
+                className={`relative h-16 rounded-xl overflow-hidden border-2 transition-all text-left ${
+                  category === cat.value
+                    ? "border-primary ring-2 ring-primary/40 scale-[1.02]"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <img src={cat.bg} alt={cat.label} className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
+                {category === cat.value && (
+                  <div className="absolute inset-0 bg-primary/20" />
+                )}
+                <div className="relative z-10 flex items-center gap-2 px-3 h-full">
+                  <span className="text-xl">{cat.emoji}</span>
+                  <span className="text-xs font-semibold text-foreground leading-tight">{cat.label}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
         <Button type="submit" disabled={loading} className="w-full bg-gradient-brand glow-primary font-display font-semibold">
