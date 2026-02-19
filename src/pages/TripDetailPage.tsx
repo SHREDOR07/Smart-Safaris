@@ -9,6 +9,8 @@ import { format } from "date-fns";
 import AddExpenseDialog from "@/components/AddExpenseDialog";
 import EditTripDialog from "@/components/EditTripDialog";
 import TripMap from "@/components/TripMap";
+import DestinationPlaces from "@/components/DestinationPlaces";
+import TransportLinks from "@/components/TransportLinks";
 import { useToast } from "@/hooks/use-toast";
 
 type Trip = Tables<"trips">;
@@ -119,6 +121,34 @@ const TripDetailPage = () => {
         <div className="mb-6">
           <h2 className="font-display font-semibold mb-3">Map & Route</h2>
           <TripMap location={trip.location} />
+        </div>
+      )}
+
+      {/* Destination Places — restaurants & hotels */}
+      {trip.location && (
+        <div className="rounded-xl bg-card border border-border p-4 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">🏙️</span>
+            <div>
+              <h2 className="font-display font-semibold text-base leading-tight">Places in {trip.location}</h2>
+              <p className="text-xs text-muted-foreground">Nearby restaurants, cafés & accommodation</p>
+            </div>
+          </div>
+          <DestinationPlaces location={trip.location} />
+        </div>
+      )}
+
+      {/* Transport & Taxi links */}
+      {trip.location && (
+        <div className="rounded-xl bg-card border border-border p-4 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">🚖</span>
+            <div>
+              <h2 className="font-display font-semibold text-base leading-tight">Get There</h2>
+              <p className="text-xs text-muted-foreground">Ride-hailing & taxi services for your destination</p>
+            </div>
+          </div>
+          <TransportLinks origin={undefined} destination={trip.location} />
         </div>
       )}
 
