@@ -108,16 +108,16 @@ const TripDetailPage = () => {
   return (
     <div className="max-w-lg mx-auto">
       {/* Hero header with category background */}
-      <div
-        className="relative px-4 pt-6 pb-20 overflow-hidden"
-        style={{
-          backgroundImage: `url(${bgImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
+      <div className="relative px-4 pt-6 pb-24 overflow-hidden min-h-[220px]">
+        {/* Background image – absolutely positioned so it fills the hero */}
+        <img
+          src={bgImage}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+        />
         {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background pointer-events-none" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
