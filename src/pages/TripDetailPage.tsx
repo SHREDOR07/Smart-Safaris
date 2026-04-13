@@ -113,7 +113,7 @@ const TripDetailPage = () => {
         style={{ backgroundImage: `url(${bgImage})` }}
       >
         {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 via-60% to-background to-85% pointer-events-none" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
