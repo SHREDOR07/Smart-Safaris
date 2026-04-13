@@ -109,7 +109,7 @@ const TripDetailPage = () => {
     <div className="max-w-lg mx-auto">
       {/* Hero header with category background */}
       <div
-        className="relative px-4 pt-6 pb-24 overflow-hidden min-h-[220px] bg-cover bg-center"
+        className="relative z-0 px-4 pt-6 pb-24 overflow-hidden min-h-[220px] bg-cover bg-center"
         style={{ backgroundImage: `url(${bgImage})` }}
       >
         {/* Dark overlay for readability */}
@@ -160,7 +160,7 @@ const TripDetailPage = () => {
         </div>
       </div>
 
-      <div className="px-4 -mt-6 pb-6">
+      <div className="relative z-10 px-4 -mt-4 pb-6">
         {/* Trip info card */}
         <div className="rounded-xl bg-card border border-border p-4 mb-6 shadow-lg">
           <div className="grid grid-cols-2 gap-3 text-sm">
