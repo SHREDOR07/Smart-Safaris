@@ -54,16 +54,15 @@ const DashboardPage = () => {
   return (
     <div className="max-w-lg mx-auto">
       {/* Hero Header with background image */}
-      <div
-        className="relative px-4 pt-10 pb-16 mb-[-2rem] overflow-hidden"
-        style={{
-          backgroundImage: `url(${heroBg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-        }}
-      >
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/50 to-background pointer-events-none" />
+      <div className="relative px-4 pt-10 pb-16 mb-[-2rem] overflow-hidden">
+        <img
+          src={heroBg}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+        />
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background pointer-events-none" />
 
         <div className="relative z-10 flex items-center justify-between mb-2">
           <div>
