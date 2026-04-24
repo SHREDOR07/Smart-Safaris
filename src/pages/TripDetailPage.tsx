@@ -11,6 +11,7 @@ import EditTripDialog from "@/components/EditTripDialog";
 import TripMap from "@/components/TripMap";
 import DestinationPlaces from "@/components/DestinationPlaces";
 import TransportLinks from "@/components/TransportLinks";
+import TripItinerary from "@/components/TripItinerary";
 import { useToast } from "@/hooks/use-toast";
 
 import beachBg from "@/assets/category-beach.jpg";
@@ -222,6 +223,14 @@ const TripDetailPage = () => {
             <TransportLinks origin={undefined} destination={trip.location} />
           </div>
         )}
+
+        {/* Itinerary */}
+        <TripItinerary
+          tripId={trip.id}
+          userId={user!.id}
+          startDate={trip.start_date}
+          endDate={trip.end_date}
+        />
 
         {/* Expenses */}
         <div className="flex items-center justify-between mb-4">
