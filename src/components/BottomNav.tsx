@@ -1,7 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Map, Settings } from "lucide-react";
+import { Home, Map, Settings, Shield } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 
-const tabs = [
+const baseTabs = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/trips", icon: Map, label: "Trips" },
   { to: "/settings", icon: Settings, label: "Settings" },
@@ -9,6 +10,11 @@ const tabs = [
 
 const BottomNav = () => {
   const location = useLocation();
+  const { isAdmin } = useUserRole();
+
+  const tabs = isAdmin
+    ? [...baseTabs, { to: "/admin", icon: Shield, label: "Admin" }]
+    : baseTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-lg">
